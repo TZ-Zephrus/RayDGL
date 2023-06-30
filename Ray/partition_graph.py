@@ -5,7 +5,8 @@ import time
 import dgl
 import numpy as np
 import torch as th
-from dgl.data import CoraGraphDataset
+from dgl.data import CoraGraphDataset, CoraFullDataset, PubmedGraphDataset, RedditDataset, FraudDataset
+from ogb.nodeproppred import DglNodePropPredDataset
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -50,15 +51,46 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--output",
         type=str,
-        default="/root/wtz/dataset/cora partition additional",
+        default="/root/wtz/RayDGL/dataset/cora partition additional",
         help="Output path of partitioned graph.",
     )
     args = argparser.parse_args()
 
     start = time.time()
-    dataset = CoraGraphDataset(raw_dir="/root/wtz/dataset/cora")
+    
+    # # ogbn dataset
+    # dataset = DglNodePropPredDataset(name = "ogbn-arxiv", root = "/root/wtz/RayDGL/dataset/ogbn-arxiv")
+    # g, labels = dataset[0]
+    # split_idx = dataset.get_idx_split()
+    # train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
+    # graph, label = dataset[0] # graph: dgl graph object, label: torch tensor of shape (num_nodes, num_tasks)
+    # labels = labels[:, 0]
+    # g.ndata['labels'] = labels
+    
+    # cora dataset
+    datasetname = 'reddit'
+    num_parts = 100
+
+    if datasetname == 'cora':
+        dataset = CoraGraphDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 7
+    if datasetname == 'cora_nobalance':
+        dataset = CoraGraphDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 7
+    if datasetname == 'pubmed':
+        dataset = PubmedGraphDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 3
+    if datasetname == 'reddit':
+        dataset = RedditDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 41
+    
+    
     g = dataset[0]
-    g = dgl.remove_self_loop(g)  # 消除自环
+    # g = dgl.remove_self_loop(g)  # 消除自环
+    
+    print(g.ndata)
+
+
     print(
         "load {} takes {:.3f} seconds".format(args.dataset, time.time() - start)
     )
@@ -84,14 +116,13 @@ if __name__ == "__main__":
     
     node_map, edge_map = dgl.distributed.partition.partition_graph(
         g,
-        args.dataset,
-        args.num_parts,
-        args.output,
-        num_hops = 2, 
+        graph_name = datasetname,
+        num_parts = 100,
+        out_path = "/root/wtz/RayDGL/dataset/{} {} partition".format(datasetname, num_parts),
+        num_hops = 1, 
         part_method=args.part_method,
-        balance_ntypes=g.ndata['train_mask'],
-        return_mapping=True, 
-        num_trainers_per_machine=args.num_trainers_per_machine
+        # balance_ntypes=g.ndata['train_mask'],
+        return_mapping=True
     )
     print(node_map)
     print(edge_map)

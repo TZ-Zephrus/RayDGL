@@ -48,7 +48,7 @@ class SAGE(nn.Module):
 
 # 数据准备
 sampler = dgl.dataloading.MultiLayerFullNeighborSampler(2) # 这里采样得到两个块
-dataset = CoraGraphDataset(raw_dir="/root/wtz/dataset/cora") # Cora citation network dataset
+dataset = CoraGraphDataset(raw_dir="/root/wtz/RayDGL/dataset/cora") # Cora citation network dataset
 graph = dataset[0]
 graph = dgl.remove_self_loop(graph)  # 消除自环
 node_features = graph.ndata['feat']
@@ -68,7 +68,7 @@ train_dataloader = []
 for i in range(3):
     (
     g_local, node_feats, edge_feats, gpb, graph_name, ntypes_list, etypes_list,
-    ) = dgl.distributed.load_partition('/root/wtz/dataset/cora partition/cora.json', i)
+    ) = dgl.distributed.load_partition('/root/wtz/RayDGL/dataset/cora partition additional/cora.json', i)
     
     local_nodes = g_local.ndata['_ID']
     inner_nodes_id = torch.nonzero(g_local.ndata['inner_node']==1, as_tuple=False).view(-1)
