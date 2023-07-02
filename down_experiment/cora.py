@@ -1,4 +1,5 @@
 import numpy as np
+import argparse
 import numpy.random
 import torch
 import dgl
@@ -11,21 +12,34 @@ import random
 import pandas as pd
 
 # 拉取邻接矩阵，特征，标签
-# 选择数据集
-datasetname = 'reddit'
+# 选择数据集    
+argparser = argparse.ArgumentParser(description='决定丢失副本数')
+argparser.add_argument('--part_num', 
+                       type=int,
+                       default=0,
+                       help='丢失的子图数')
+argparser.add_argument('--dataset',
+                       type=str,
+                       default='cora',
+                       help='选取数据集')
+args = argparser.parse_args()
+
+datasetname = args.dataset
+num_parts = 100
+
 
 
 if datasetname == 'cora':
-    dataset = CoraGraphDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+    dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 7
 if datasetname == 'cora_nobalance':
-    dataset = CoraGraphDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+    dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 7
 if datasetname == 'pubmed':
-    dataset = PubmedGraphDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+    dataset = PubmedGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 3
 if datasetname == 'reddit':
-    dataset = RedditDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+    dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 41
 
 graph = dataset[0]
@@ -94,16 +108,16 @@ def del_mask(del_list, origin_mask):
 down = True
 loss_time = 0   # 选择在哪个epoch丢失
 rebuild = True
-part_num = 0    # 要丢掉的子图数量
-part_id = random.sample(range(0, 20), part_num)       # 随机选取子图
+part_num = args.part_num    # 要丢掉的子图数量
+part_id = random.sample(range(0, num_parts), part_num)       # 随机选取子图
 # 手动指定子图处
-part_id = [0]
+# part_id = [0]
 
 part_node_id_total = []
 for i in range(len(part_id)):
     (
         g_local, node_feats, edge_feats, gpb, graph_name, ntypes_list, etypes_list,
-    ) = dgl.distributed.load_partition(part_config='/root/wtz/RayDGL/dataset/{} 20 partition/{}.json'.format(datasetname, datasetname), part_id=part_id[i])
+    ) = dgl.distributed.load_partition(part_config='/home/asd/文档/wtz/wtz/RayDGL/dataset/{} {} partition/{}.json'.format(datasetname, num_parts, datasetname), part_id=part_id[i])
 
     num_node = sum(g_local.ndata['inner_node'].numpy())
     print('partition {}, num_node = {}'.format(part_id[i], num_node))
@@ -115,10 +129,10 @@ for i in range(len(part_id)):
 new_train_mask = torch.tensor([])
 new_val_mask = torch.tensor([])
 new_test_mask = torch.tensor([])
-for i in range(20):
+for i in range(num_parts):
     (
         g_local, node_feats, edge_feats, gpb, graph_name, ntypes_list, etypes_list,
-    ) = dgl.distributed.load_partition(part_config='/root/wtz/RayDGL/dataset/{} 20 partition/{}.json'.format(datasetname, datasetname), part_id=i)
+    ) = dgl.distributed.load_partition(part_config='/home/asd/文档/wtz/wtz/RayDGL/dataset/{} {} partition/{}.json'.format(datasetname, num_parts, datasetname), part_id=i)
     new_train_mask = torch.cat([new_train_mask, node_feats['_N/train_mask']], 0)
     new_val_mask = torch.cat([new_val_mask, node_feats['_N/val_mask']], 0)
     new_test_mask = torch.cat([new_test_mask, node_feats['_N/test_mask']], 0)
@@ -179,7 +193,7 @@ loss_function = nn.CrossEntropyLoss()
 opt = torch.optim.Adam(model.parameters())
 
 # GPU上训练
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model.to(device)
 loss_function.to(device)
 feat = feat.to(device)

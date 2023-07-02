@@ -17,17 +17,17 @@ def connect_edge(origin_u, origin_v, del_node):
         # print('i = ', i)
     return e
 
-datasetname = 'pubmed'
+datasetname = 'cora'
 num_parts = 100
 
 if datasetname == 'cora':
-    dataset = CoraGraphDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+    dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 7
 if datasetname == 'pubmed':
-    dataset = PubmedGraphDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+    dataset = PubmedGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 3
 if datasetname == 'reddit':
-    dataset = RedditDataset(raw_dir='/root/wtz/RayDGL/dataset/{}'.format(datasetname))
+    dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 41
 graph = dataset[0]
 edges = graph.edges()
@@ -46,7 +46,7 @@ all_edge = 0
 for i in range(100):
     (
         g_local, node_feats, edge_feats, gpb, graph_name, ntypes_list, etypes_list,
-    ) = dgl.distributed.load_partition(part_config='/root/wtz/RayDGL/dataset/{} {} partition/{}.json'.format(datasetname, num_parts, datasetname), part_id=i)
+    ) = dgl.distributed.load_partition(part_config='/home/asd/文档/wtz/wtz/RayDGL/dataset/{} {} partition/{}.json'.format(datasetname, num_parts, datasetname), part_id=i)
 
     num_node = sum(g_local.ndata['inner_node'].numpy())
     num_edge = sum(g_local.edata['inner_edge'].numpy())
