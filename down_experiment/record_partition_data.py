@@ -5,8 +5,11 @@ import torch
 import dgl
 import torch.nn as nn
 from dgl.data import CoraGraphDataset, PubmedGraphDataset, RedditDataset
+from igb.dataloader import IGB260MDGLDataset
 from dgl.nn.pytorch import GraphConv, SAGEConv
+import argparse
 import time
+
 
 def connect_edge(origin_u, origin_v, del_node):
     time = len(origin_u)  # 记录一共所需的循环次数，也就是最开始的列表长度
@@ -17,7 +20,7 @@ def connect_edge(origin_u, origin_v, del_node):
         # print('i = ', i)
     return e
 
-datasetname = 'cora'
+datasetname = 'igb-small'
 num_parts = 100
 
 if datasetname == 'cora':
@@ -29,6 +32,23 @@ if datasetname == 'pubmed':
 if datasetname == 'reddit':
     dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 41
+if datasetname == 'igb_small':
+    parser2 = argparse.ArgumentParser()
+    parser2.add_argument('--path', type=str, default='/home/asd/文档/wtz/wtz/RayDGL/dataset/igb_small', 
+        help='path containing the datasets')
+    parser2.add_argument('--dataset_size', type=str, default='small',
+        choices=['tiny', 'small', 'medium', 'large', 'full'], 
+        help='size of the datasets')
+    parser2.add_argument('--num_classes', type=int, default=19, 
+        choices=[19, 2983], help='number of classes')
+    parser2.add_argument('--in_memory', type=int, default=1, 
+        choices=[0, 1], help='0:read only mmap_mode=r, 1:load into memory')
+    parser2.add_argument('--synthetic', type=int, default=0,
+        choices=[0, 1], help='0:nlp-node embeddings, 1:random')
+    args2 = parser2.parse_args()
+    dataset = IGB260MDGLDataset(args2)
+    
+    
 graph = dataset[0]
 edges = graph.edges()
 nodes = graph.nodes()

@@ -5,7 +5,8 @@ import time
 import dgl
 import numpy as np
 import torch as th
-from dgl.data import CoraGraphDataset, PubmedGraphDataset
+from dgl.data import CoraGraphDataset, PubmedGraphDataset, FlickrDataset, RedditDataset
+from igb.dataloader import IGB260MDGLDataset
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -53,14 +54,49 @@ if __name__ == "__main__":
         default="/root/wtz/RayDGL/dataset/pubmed_random 20 partition",
         help="Output path of partitioned graph.",
     )
-    args = argparser.parse_args()
+    args1 = argparser.parse_args()
+
 
     start = time.time()
-    dataset = PubmedGraphDataset(raw_dir="/root/wtz/RayDGL/dataset/pubmed")
+    datasetname = 'igb-small'
+    if datasetname == 'cora':
+        dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 7
+    if datasetname == 'cora_nobalance':
+        dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 7
+    if datasetname == 'pubmed':
+        dataset = PubmedGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 3
+    if datasetname == 'reddit':
+        dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 41
+    if datasetname == 'flickr':
+        dataset = FlickrDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 7
+    if datasetname == 'igb_small':
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--path', type=str, default='/home/asd/文档/wtz/wtz/RayDGL/dataset/igb_small', 
+            help='path containing the datasets')
+        parser.add_argument('--dataset_size', type=str, default='small',
+            choices=['tiny', 'small', 'medium', 'large', 'full'], 
+            help='size of the datasets')
+        parser.add_argument('--num_classes', type=int, default=19, 
+            choices=[19, 2983], help='number of classes')
+        parser.add_argument('--in_memory', type=int, default=1, 
+            choices=[0, 1], help='0:read only mmap_mode=r, 1:load into memory')
+        parser.add_argument('--synthetic', type=int, default=0,
+            choices=[0, 1], help='0:nlp-node embeddings, 1:random')
+        args2 = parser.parse_args()
+        dataset = IGB260MDGLDataset(args2)
+        num_class = 19
+    
+    
     g = dataset[0]
+    num_parts = 100
     g = dgl.remove_self_loop(g)  # 消除自环
     print(
-        "load {} takes {:.3f} seconds".format(args.dataset, time.time() - start)
+        "load {} takes {:.3f} seconds".format(datasetname, time.time() - start)
     )
     print("|V|={}, |E|={}".format(g.num_nodes(), g.num_edges()))
     print(
@@ -70,23 +106,23 @@ if __name__ == "__main__":
             th.sum(g.ndata["test_mask"]),
         )
     )
-    if args.balance_train:
+    if args1.balance_train:
         balance_ntypes = g.ndata["train_mask"]
     else:
         balance_ntypes = None
 
-    if args.undirected:
+    if args1.undirected:
         sym_g = dgl.to_bidirected(g, readonly=True)
         for key in g.ndata:
             sym_g.ndata[key] = g.ndata[key]
         g = sym_g
 
-dgl.distributed.partition.partition_graph(
+    dgl.distributed.partition.partition_graph(
         g,
-        'pubmed',
-        20,
-        args.output,
+        datasetname,
+        num_parts,
+        '/home/asd/文档/wtz/wtz/RayDGL/dataset/{} {} partition'.format(datasetname, num_parts),
         num_hops=1,
-        part_method='random',
-        balance_ntypes=g.ndata['train_mask']
+        part_method='metis',
+        # balance_ntypes=g.ndata['train_mask']
     )
