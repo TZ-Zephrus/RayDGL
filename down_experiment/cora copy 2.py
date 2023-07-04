@@ -19,10 +19,10 @@ argparser.add_argument('--part_num',
                        type=int,
                        default=0,
                        help='丢失的子图数')
-argparser.add_argument('--loss_time',
-                       type=int,
-                       default=0,
-                       help='选取丢失时间')
+# argparser.add_argument('--loss_time',
+#                        type=int,
+#                        default=0,
+#                        help='选取丢失时间')
 argparser.add_argument('--dataset',
                        type=str,
                        default='cora',
@@ -131,8 +131,7 @@ def del_mask(del_list, origin_mask):
 
 # 选取子图
 down = True
-# loss_time = 0   # 选择在哪个epoch丢失
-loss_time = args.loss_time
+loss_time = 0   # 选择在哪个epoch丢失
 rebuild = True
 part_num = args.part_num    # 要丢掉的子图数量
 # part_num = 0

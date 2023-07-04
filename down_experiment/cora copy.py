@@ -14,19 +14,19 @@ from igb.dataloader import IGB260MDGLDataset
 
 # 拉取邻接矩阵，特征，标签
 # 选择数据集    
-# argparser = argparse.ArgumentParser(description='决定丢失副本数')
-# argparser.add_argument('--part_num', 
-#                        type=int,
-#                        default=0,
-#                        help='丢失的子图数')
-# argparser.add_argument('--dataset',
-#                        type=str,
-#                        default='igb_small',
-#                        help='选取数据集')
-# args = argparser.parse_args()
+argparser = argparse.ArgumentParser(description='决定丢失副本数')
+argparser.add_argument('--part_num', 
+                       type=int,
+                       default=0,
+                       help='丢失的子图数')
+argparser.add_argument('--dataset',
+                       type=str,
+                       default='igb_small',
+                       help='选取数据集')
+args = argparser.parse_args()
 
-# datasetname = args.dataset
-datasetname = 'igb_small'
+datasetname = args.dataset
+# datasetname = 'igb_small'
 num_parts = 100
 
 
@@ -128,8 +128,8 @@ def del_mask(del_list, origin_mask):
 down = True
 loss_time = 0   # 选择在哪个epoch丢失
 rebuild = True
-# part_num = args.part_num    # 要丢掉的子图数量
-part_num = 0
+part_num = args.part_num    # 要丢掉的子图数量
+# part_num = 0
 part_id = random.sample(range(0, num_parts), part_num)       # 随机选取子图
 # 手动指定子图处
 # part_id = [0]
