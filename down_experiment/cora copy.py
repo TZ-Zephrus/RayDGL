@@ -4,13 +4,14 @@ import numpy.random
 import torch
 import dgl
 import torch.nn as nn
-from dgl.data import CoraGraphDataset, PubmedGraphDataset, RedditDataset, FlickrDataset
+from dgl.data import CoraGraphDataset, PubmedGraphDataset, RedditDataset, FlickrDataset, YelpDataset
 from dgl.nn.pytorch import GraphConv, SAGEConv
 import time
 import networkx as nx
 import random
 import pandas as pd
 from igb.dataloader import IGB260MDGLDataset
+from ogb.nodeproppred import DglNodePropPredDataset
 
 # 拉取邻接矩阵，特征，标签
 # 选择数据集    
@@ -19,15 +20,33 @@ argparser.add_argument('--part_num',
                        type=int,
                        default=0,
                        help='丢失的子图数')
+argparser.add_argument('--loss_time',
+                       type=int,
+                       default=0,
+                       help='选取丢失时间')
 argparser.add_argument('--dataset',
                        type=str,
-                       default='igb_small',
+                       default='ogbn-arxiv',
                        help='选取数据集')
+
+
+
+argparser.add_argument('--path', type=str, default='/home/asd/文档/wtz/wtz/RayDGL/dataset/igb_small', 
+                       help='path containing the datasets')
+argparser.add_argument('--dataset_size', type=str, default='small',
+                       choices=['tiny', 'small', 'medium', 'large', 'full'], 
+                       help='size of the datasets')
+argparser.add_argument('--num_classes', type=int, default=19, 
+                       choices=[19, 2983], help='number of classes')
+argparser.add_argument('--in_memory', type=int, default=1, 
+                       choices=[0, 1], help='0:read only mmap_mode=r, 1:load into memory')
+argparser.add_argument('--synthetic', type=int, default=0,
+                       choices=[0, 1], help='0:nlp-node embeddings, 1:random')
 args = argparser.parse_args()
 
+
 datasetname = args.dataset
-# datasetname = 'igb_small'
-num_parts = 100
+num_parts = 4
 
 
 if datasetname == 'cora':
@@ -42,40 +61,57 @@ if datasetname == 'pubmed':
 if datasetname == 'reddit':
     dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 41
+if datasetname == 'reddit_ballancetrain':
+    dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format('reddit'))
+    num_class = 41
 if datasetname == 'flickr':
     dataset = FlickrDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 7
 if datasetname == 'igb_small':
-    parser2 = argparse.ArgumentParser()
-    parser2.add_argument('--path', type=str, default='/home/asd/文档/wtz/wtz/RayDGL/dataset/igb_small', 
-        help='path containing the datasets')
-    parser2.add_argument('--dataset_size', type=str, default='small',
-        choices=['tiny', 'small', 'medium', 'large', 'full'], 
-        help='size of the datasets')
-    parser2.add_argument('--num_classes', type=int, default=19, 
-        choices=[19, 2983], help='number of classes')
-    parser2.add_argument('--in_memory', type=int, default=1, 
-        choices=[0, 1], help='0:read only mmap_mode=r, 1:load into memory')
-    parser2.add_argument('--synthetic', type=int, default=0,
-        choices=[0, 1], help='0:nlp-node embeddings, 1:random')
-    args2 = parser2.parse_args()
-    dataset = IGB260MDGLDataset(args2)
+    dataset = IGB260MDGLDataset(args)
     num_class = 19
+if datasetname == 'yelp':
+    dataset = YelpDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+    num_class = 100
+if datasetname == 'ogbn_products':
+    dataset = DglNodePropPredDataset(name = 'ogbn-products', root='/home/asd/文档/wtz/wtz/RayDGL/dataset/ogbn_products')
+    num_class =47
 
-graph = dataset[0]
-edges = graph.edges()
-nodes = graph.nodes()
-train_mask = graph.ndata['train_mask']
-val_mask = graph.ndata['val_mask']
-test_mask = graph.ndata['test_mask']
-label = graph.ndata['label']
-feat = graph.ndata['feat']
-u = edges[0].numpy()
-v = edges[1].numpy()
-u_list = edges[0].tolist()
-v_list = edges[1].tolist()
-# print(u)
-# print(v)
+
+
+if datasetname == 'ogbn_products':
+    graph_full, label = dataset[0] # graph: dgl graph object, label: torch tensor of shape (num_nodes, num_tasks)
+    edges = graph_full.edges()
+    nodes = graph_full.nodes()
+    split_idx = dataset.get_idx_split()
+    train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
+    train_mask = torch.zeros(graph_full.num_nodes(), dtype=bool)
+    val_mask = torch.zeros(graph_full.num_nodes(), dtype=bool)
+    test_mask = torch.zeros(graph_full.num_nodes(), dtype=bool)
+    train_mask[train_idx] = True
+    val_mask[valid_idx] = True
+    test_mask[test_idx] = True
+    label = label.flatten()           # 张量展开为1维
+    feat = graph_full.ndata['feat']    
+    u = edges[0].numpy()
+    v = edges[1].numpy()
+    u_list = edges[0].tolist()
+    v_list = edges[1].tolist()
+else:
+    graph_full = dataset[0]
+    edges = graph_full.edges()
+    nodes = graph_full.nodes()
+    train_mask = graph_full.ndata['train_mask'].bool()
+    val_mask = graph_full.ndata['val_mask'].bool()
+    test_mask = graph_full.ndata['test_mask'].bool()
+    label = graph_full.ndata['label']
+    feat = graph_full.ndata['feat']
+    u = edges[0].numpy()
+    v = edges[1].numpy()
+    u_list = edges[0].tolist()
+    v_list = edges[1].tolist()
+    # print(u)
+    # print(v)
 
 def del_edge1(origin_u, origin_v, del_node):
     time = len(origin_u)  # 记录一共所需的循环次数，也就是最开始的列表长度
@@ -126,13 +162,14 @@ def del_mask(del_list, origin_mask):
 
 # 选取子图
 down = True
-loss_time = 0   # 选择在哪个epoch丢失
+# loss_time = 0   # 选择在哪个epoch丢失
+loss_time = args.loss_time
 rebuild = True
 part_num = args.part_num    # 要丢掉的子图数量
 # part_num = 0
 part_id = random.sample(range(0, num_parts), part_num)       # 随机选取子图
 # 手动指定子图处
-# part_id = [0]
+# part_id = [3]
 
 part_node_id_total = []
 for i in range(len(part_id)):
@@ -170,7 +207,7 @@ if rebuild == True:
     # print(u,len(u),v,len(v))
     # print(new_u,len(new_u),new_v,len(new_v))
     # print(len(part_node_id))
-    g = dgl.graph((new_u, new_v), num_nodes=graph.num_nodes())
+    g = dgl.graph((new_u, new_v), num_nodes=graph_full.num_nodes())
     # train_mask = new_train_mask.bool()  # 转换为bool
     # val_mask = new_val_mask.bool()
     # test_mask = new_test_mask.bool()
@@ -185,7 +222,7 @@ if rebuild == True:
     time_rebuild = time.time() - time_rebuild
     print('time_rebuild = ', time_rebuild)
 else:
-    g = graph
+    g = graph_full
 
 class GCN(nn.Module):
     def __init__(self, in_feats, hidden_size, num_classes):
@@ -199,6 +236,22 @@ class GCN(nn.Module):
         h = self.conv2(g, h)
         return h
 
+class SAGE(nn.Module):
+    def __init__(self, in_feats, hidden_size, num_classes):
+        super().__init__()
+        self.conv1 = SAGEConv( 
+            in_feats=in_feats, out_feats=hidden_size, aggregator_type='gcn')
+        self.conv2 = SAGEConv(
+            in_feats=hidden_size, out_feats=num_classes, aggregator_type='mean')
+        # self.dropout =  nn.Dropout(dropout)
+    
+    def forward(self, graph, inputs):
+        # inputs 是节点的特征 [N, in_feas]
+        h = self.conv1(graph, inputs)
+        h = torch.relu(h)
+        h = self.conv2(graph, h)
+        return h 
+
 def evaluate(model, graph, features, labels, mask):
     model.eval()
     with torch.no_grad():
@@ -209,8 +262,11 @@ def evaluate(model, graph, features, labels, mask):
         correct = torch.sum(indices == labels)
         return correct.item() * 1.0 / len(labels)
 
-model = GCN(feat.shape[1], 128, num_classes=num_class)
-loss_function = nn.CrossEntropyLoss()
+model = SAGE(feat.shape[1], 128, num_classes=num_class)
+if datasetname == 'yelp':
+    loss_function = nn.MultiLabelSoftMarginLoss()
+else:
+    loss_function = nn.CrossEntropyLoss()
 opt = torch.optim.Adam(model.parameters())
 
 # GPU上训练
@@ -218,7 +274,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model.to(device)
 loss_function.to(device)
 feat = feat.to(device)
-graph = graph.to(device)
+graph_full = graph_full.to(device)
 g = g.to(device)
 label = label.to(device)
 
@@ -228,13 +284,17 @@ best_val_acc = 0
 for epoch in range(500):
     print('Epoch {}'.format(epoch))
     model.train()
-    graph = graph
+    
+    graph = graph_full
     if down == True:
         if epoch >= loss_time:
             graph = g
             train_mask = train_mask_del
             val_mask = val_mask_del
-            test_mask = test_mask_del
+            # test_mask = test_mask_del
+    
+    # graph = g
+    
     # 用所有的节点进行前向传播
     logits = model(graph, feat)
     # 计算损失
@@ -250,7 +310,7 @@ for epoch in range(500):
 print("\nTotal Time = ", time.time() - time1)
 
 # 测试集评估
-acc = evaluate(model, graph, feat, label, test_mask)
+acc = evaluate(model, graph_full, feat, label, test_mask)
 print("test accuracy = {:.4f}".format(acc))
 
 if down == True:

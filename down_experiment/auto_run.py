@@ -3,11 +3,13 @@ import subprocess
 import numpy as np
 import time
 
-# os.system('python3 /home/asd/文档/wtz/wtz/RayDGL/down_experiment/cora.py --part_num=4')
+# os.system('python3 /home/asd/文档/wtz/wtz/RayDGL/down_experiment/reddit.py --part_num=100')
 
 time1 = time.time()
-max_loss = [1,2,3]
-train_times = 1
+# max_loss = [0,5,10,15,20,25,30,35,40,45,50,55,60,65]
+# max_loss = [30,40,60]
+max_loss = [0]
+train_times = 10
 acc_total = np.reshape(np.arange(1,train_times+1), (1, train_times))    # acc矩阵
 
 for i in max_loss:
@@ -19,9 +21,9 @@ for i in max_loss:
                             stderr=subprocess.PIPE,  # 将错误输出放到一个管道里
                             )
         result = res.stdout.read()          # 拿到的是 bytes 格式的字符
-        result= str(result,encoding="gbk")  # 在windows需要使用gbk编码
+        result= str(result,encoding="gbk")  # 在windows需要使用gbk编码 
         # print(result)
-        # 找出acc
+        # 找出acc``
         lines = result.split('\n')
         for line in lines:
             if 'test accuracy' in line:
@@ -33,7 +35,7 @@ for i in max_loss:
     acc_total = np.append(acc_total, acc_line, axis=0)
 print(acc_total) 
 
-acc_final = np.median(acc_total, axis=1)
+acc_final = np.mean(acc_total, axis=1)
 print(acc_final)
 print('time: ', time.time()-time1)
 

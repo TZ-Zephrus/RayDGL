@@ -4,8 +4,9 @@ import numpy.random
 import torch
 import dgl
 import torch.nn as nn
-from dgl.data import CoraGraphDataset, PubmedGraphDataset, RedditDataset
+from dgl.data import CoraGraphDataset, PubmedGraphDataset, RedditDataset, FlickrDataset, YelpDataset
 from igb.dataloader import IGB260MDGLDataset
+from ogb.nodeproppred import DglNodePropPredDataset
 from dgl.nn.pytorch import GraphConv, SAGEConv
 import argparse
 import time
@@ -20,10 +21,14 @@ def connect_edge(origin_u, origin_v, del_node):
         # print('i = ', i)
     return e
 
-datasetname = 'igb-small'
-num_parts = 100
 
+
+datasetname = 'reddit'
+num_parts = 100
 if datasetname == 'cora':
+    dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+    num_class = 7
+if datasetname == 'cora_nobalance':
     dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 7
 if datasetname == 'pubmed':
@@ -32,38 +37,83 @@ if datasetname == 'pubmed':
 if datasetname == 'reddit':
     dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
     num_class = 41
+if datasetname == 'reddit_ballancetrain':
+    dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format('reddit'))
+    num_class = 41
+if datasetname == 'reddit_ballancelabel':
+    dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format('reddit'))
+    num_class = 41
+if datasetname == 'flickr':
+    dataset = FlickrDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+    num_class = 7
 if datasetname == 'igb_small':
-    parser2 = argparse.ArgumentParser()
-    parser2.add_argument('--path', type=str, default='/home/asd/文档/wtz/wtz/RayDGL/dataset/igb_small', 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path', type=str, default='/home/asd/文档/wtz/wtz/RayDGL/dataset/igb_small', 
         help='path containing the datasets')
-    parser2.add_argument('--dataset_size', type=str, default='small',
+    parser.add_argument('--dataset_size', type=str, default='small',
         choices=['tiny', 'small', 'medium', 'large', 'full'], 
         help='size of the datasets')
-    parser2.add_argument('--num_classes', type=int, default=19, 
+    parser.add_argument('--num_classes', type=int, default=19, 
         choices=[19, 2983], help='number of classes')
-    parser2.add_argument('--in_memory', type=int, default=1, 
+    parser.add_argument('--in_memory', type=int, default=1, 
         choices=[0, 1], help='0:read only mmap_mode=r, 1:load into memory')
-    parser2.add_argument('--synthetic', type=int, default=0,
+    parser.add_argument('--synthetic', type=int, default=0,
         choices=[0, 1], help='0:nlp-node embeddings, 1:random')
-    args2 = parser2.parse_args()
+    args2 = parser.parse_args()
     dataset = IGB260MDGLDataset(args2)
+    num_class = 19
+if datasetname == 'yelp':
+    dataset = YelpDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+    num_class = 100
+if datasetname == 'ogbn_products':
+    dataset = DglNodePropPredDataset(name = 'ogbn-products', root='/home/asd/文档/wtz/wtz/RayDGL/dataset/ogbn_products')
+    split_idx = dataset.get_idx_split()
+    train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
+    graph, label = dataset[0] # graph: dgl graph object, label: torch tensor of shape (num_nodes, num_tasks)
+if datasetname == 'ogbn_arxiv':
+    dataset = DglNodePropPredDataset(name = 'ogbn-arxiv', root='/home/asd/文档/wtz/wtz/RayDGL/dataset/ogbn_arxiv')
+    split_idx = dataset.get_idx_split()
+    train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
+    graph, label = dataset[0] # graph: dgl graph object, label: torch tensor of shape (num_nodes, num_tasks)
     
     
-graph = dataset[0]
-edges = graph.edges()
-nodes = graph.nodes()
-train_mask = graph.ndata['train_mask']
-val_mask = graph.ndata['val_mask']
-test_mask = graph.ndata['test_mask']
-label = graph.ndata['label']
-feat = graph.ndata['feat']
-u = edges[0].numpy()
-v = edges[1].numpy()
-u_list = edges[0].tolist()
-v_list = edges[1].tolist()
+if 'ogbn' in datasetname:
+    graph_full, label = dataset[0] # graph: dgl graph object, label: torch tensor of shape (num_nodes, num_tasks)
+    edges = graph_full.edges()
+    nodes = graph_full.nodes()
+    split_idx = dataset.get_idx_split()
+    train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
+    train_mask = torch.zeros(graph_full.num_nodes(), dtype=bool)
+    val_mask = torch.zeros(graph_full.num_nodes(), dtype=bool)
+    test_mask = torch.zeros(graph_full.num_nodes(), dtype=bool)
+    train_mask[train_idx] = True
+    val_mask[valid_idx] = True
+    test_mask[test_idx] = True
+    label = label.flatten()           # 张量展开为1维
+    feat = graph_full.ndata['feat']    
+    u = edges[0].numpy()
+    v = edges[1].numpy()
+    u_list = edges[0].tolist()
+    v_list = edges[1].tolist()
+else:
+    graph_full = dataset[0]
+    edges = graph_full.edges()
+    nodes = graph_full.nodes()
+    train_mask = graph_full.ndata['train_mask'].bool()
+    val_mask = graph_full.ndata['val_mask'].bool()
+    test_mask = graph_full.ndata['test_mask'].bool()
+    label = graph_full.ndata['label']
+    feat = graph_full.ndata['feat']
+    u = edges[0].numpy()
+    v = edges[1].numpy()
+    u_list = edges[0].tolist()
+    v_list = edges[1].tolist()
+    # print(u)
+    # print(v)
+    
 partition_data = []
 all_edge = 0
-for i in range(100):
+for i in range(num_parts):
     (
         g_local, node_feats, edge_feats, gpb, graph_name, ntypes_list, etypes_list,
     ) = dgl.distributed.load_partition(part_config='/home/asd/文档/wtz/wtz/RayDGL/dataset/{} {} partition/{}.json'.format(datasetname, num_parts, datasetname), part_id=i)
@@ -85,8 +135,8 @@ for i in range(100):
     partition_data.append([num_node, num_edge, num_train, num_val, num_test])
     # partition_data.append([num_node, num_edge, num_train, num_val, num_test, e])
 print(np.array(partition_data))
-print('all node number: ', sum([partition_data[i][0] for i in range(100)]))
-print('all edge number: ', sum([partition_data[i][1] for i in range(100)]))
-print('all train number: ', sum([partition_data[i][2] for i in range(100)]))
-print('all valid number: ', sum([partition_data[i][3] for i in range(100)]))
-print('all test number: ', sum([partition_data[i][4] for i in range(100)]))
+print('all node number: ', sum([partition_data[i][0] for i in range(num_parts)]))
+print('all edge number: ', sum([partition_data[i][1] for i in range(num_parts)]))
+print('all train number: ', sum([partition_data[i][2] for i in range(num_parts)]))
+print('all valid number: ', sum([partition_data[i][3] for i in range(num_parts)]))
+print('all test number: ', sum([partition_data[i][4] for i in range(num_parts)]))
