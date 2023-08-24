@@ -12,6 +12,8 @@ import torch.optim as optim
 import tqdm
 from ogb.nodeproppred import DglNodePropPredDataset
 import random
+from degreeJudge import arrangeOutDegree
+from degreeNerighbor import findDegreeNerghbor
 
 class SAGE(nn.Module):
     def __init__(
@@ -311,6 +313,12 @@ if __name__ == "__main__":
             v_new = np.array(v_new[~mask_v])
             return u_new, v_new
         
+        def del_edge4(target_node, del_node):    # 从一个里面删另一个里有的
+            target = pd.Series(target_node)
+            mask_del = target.isin(del_node)
+            target_node_new = np.array(target_node[~mask_del])
+            return target_node_new
+        
         def del_mask(del_list, origin_mask):
             n = len(origin_mask)
             for i in del_list:
@@ -326,7 +334,7 @@ if __name__ == "__main__":
         # part_num = 0
         part_id = random.sample(range(0, num_parts), part_num)       # 随机选取子图
         # 手动指定子图处
-        # part_id = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
+        part_id = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
         # part_id = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49]
         # part_id = [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74]
         # part_id = [75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99]
@@ -340,8 +348,19 @@ if __name__ == "__main__":
             ) = dgl.distributed.load_partition(part_config='/home/asd/文档/wtz/wtz/RayDGL/dataset/{} {} partition/{}.json'.format(datasetname, num_parts, datasetname), part_id=part_id[i])
 
             num_node = sum(g_local.ndata['inner_node'].numpy())
-            print('partition {}, num_node = {}'.format(part_id[i], num_node))
+            # 生成要删除顶点
             part_node_id = g_local.ndata['_ID'][:num_node]  # 子图中的顶点，也就是要删除的顶点
+            
+            importantDegreeList = []
+            if use_degree_judge == True:
+                # 找到当前子图的度排名
+                importantDegreeList = arrangeOutDegree(graph=g_local, ratio=reserve_ratio)
+                # 找到度排名中的顶点的n-hop邻域内顶点
+                importantDegreeList = findDegreeNerghbor(graph=g_local, neighborNode=importantDegreeList, hop_range=hop_range)
+                # 将这些顶点保留，不删去
+                part_node_id = del_edge4(part_node_id, importantDegreeList)  # 子图中的顶点，也就是要删除的顶点
+                
+            print('partition {}, num_node = {}, important_node = {}'.format(part_id[i], num_node, len(importantDegreeList)))
             part_node_id_total = np.append(part_node_id_total, part_node_id)
             part_node_id_total = part_node_id_total.astype(int)
 
@@ -448,8 +467,11 @@ if __name__ == "__main__":
         
         
     # max_loss = [5,15,25,35,45,55,65]
-    max_loss= [10,20,30,40,50,60]
-    train_times = 5
+    max_loss= [25]
+    use_degree_judge = True
+    reserve_ratio = 0.01
+    hop_range = 1
+    train_times = 1
     acc_total = np.reshape(np.arange(1,train_times+1), (1, train_times))    # acc矩阵
     for i in max_loss:
         acc_line = np.array([])     # acc矩阵的一行（一种part_num)

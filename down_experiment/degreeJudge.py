@@ -35,7 +35,8 @@ def arrangeOutDegree(graph, ratio):
         # print(count_of_target1)
     # 只有出度在前num_node*0.1名的才会被冗余存下来
     num_node = sum(graph.ndata['inner_node'].numpy())
-    sorted_elements = counter1.most_common(n = int(num_node*ratio))
+    sorted_elements = counter1.most_common(n = int(num_node*ratio))          # 从多到少
+    # sorted_elements = counter1.most_common()[:-int(num_node*ratio)-1:-1]     # 从少到多
     # print(sorted_elements)
     sorted_elements_only = [element for element, count in sorted_elements]
     # print(sorted_elements_only)  # 这里出现的，是出度排名靠前的顶点，这些顶点将不会被删去。

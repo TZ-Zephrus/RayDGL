@@ -15,7 +15,7 @@ acc_total = np.reshape(np.arange(1,train_times+1), (1, train_times))    # acc矩
 for i in max_loss:
     acc_line = np.array([])     # acc矩阵的一行（一种part_num)
     for j in range(train_times):
-        res = subprocess.Popen('python3 /home/asd/文档/wtz/wtz/RayDGL/down_experiment/cora.py --part_num={} --loss_time=0 --dataset=pubmed'.format(i),
+        res = subprocess.Popen('python3 /home/asd/文档/wtz/wtz/RayDGL/down_experiment/cora.py --part_num={} --loss_time=0 --dataset=reddit'.format(i),
                             shell=True,              # 新开一个终端
                             stdout=subprocess.PIPE,  # 执行完命令, 将正确输出放到一个管道里
                             stderr=subprocess.PIPE,  # 将错误输出放到一个管道里

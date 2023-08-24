@@ -30,7 +30,7 @@ argparser.add_argument('--loss_time',
                        help='选取丢失时间')
 argparser.add_argument('--dataset',
                        type=str,
-                       default='pubmed',
+                       default='reddit',
                        help='选取数据集')
 
 
@@ -193,7 +193,8 @@ part_id = random.sample(range(0, num_parts), part_num)       # 随机选取子�
 # part_id = [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74]
 part_id = [75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99]   # reddit:98
 use_degree_judge = True
-
+ratio = 0.6
+hop_range = 0
 part_node_id_total = []
 for i in range(len(part_id)):
     (
@@ -206,9 +207,9 @@ for i in range(len(part_id)):
     importantDegreeList = []
     if use_degree_judge == True:
         # 找到当前子图的度排名
-        importantDegreeList = arrangeOutDegree(graph=g_local, ratio=0.1)
+        importantDegreeList = arrangeOutDegree(graph=g_local, ratio=ratio)
         # 找到度排名中的顶点的n-hop邻域内顶点
-        importantDegreeList = findDegreeNerghbor(graph=g_local, neighborNode=importantDegreeList, hop_range=1)
+        importantDegreeList = findDegreeNerghbor(graph=g_local, neighborNode=importantDegreeList, hop_range=hop_range)
         # 将这些顶点保留，不删去
         part_node_id = del_edge4(part_node_id, importantDegreeList)  # 子图中的顶点，也就是要删除的顶点
     
@@ -330,7 +331,7 @@ else:
 opt = torch.optim.Adam(model.parameters())
 
 # GPU上训练
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model.to(device)
 loss_function.to(device)
 feat = feat.to(device)
