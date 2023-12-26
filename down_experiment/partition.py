@@ -5,7 +5,7 @@ import time
 import dgl
 import numpy as np
 import torch as th
-from dgl.data import CoraGraphDataset, PubmedGraphDataset, FlickrDataset, RedditDataset, YelpDataset
+from dgl.data import CoraGraphDataset, PubmedGraphDataset, FlickrDataset, RedditDataset, YelpDataset, CiteseerGraphDataset
 from igb.dataloader import IGB260MDGLDataset
 from ogb.nodeproppred import DglNodePropPredDataset
 import torch
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--dataset",
         type=str,
-        default="cora",
+        default="citeseer",
         help="datasets: reddit, ogb-product, ogb-paper100M",
     )
     argparser.add_argument(
@@ -60,34 +60,37 @@ if __name__ == "__main__":
 
 
     start = time.time()
-    datasetname = 'pubmed'
+    datasetname = 'citeseer'
     if datasetname == 'cora':
-        dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        dataset = CoraGraphDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format(datasetname))
         num_class = 7
     if datasetname == 'cora_nobalance':
-        dataset = CoraGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        dataset = CoraGraphDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format(datasetname))
         num_class = 7
     if datasetname == 'pubmed':
-        dataset = PubmedGraphDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        dataset = PubmedGraphDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format(datasetname))
         num_class = 3
+    if datasetname == 'citeseer':
+        dataset = CiteseerGraphDataset(raw_dir='/home/bit/文档/wtz/RayDGL/dataset/{}'.format(datasetname))
+        num_class = 6
     if datasetname == 'reddit':
-        dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        dataset = RedditDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format(datasetname))
         num_class = 41
     if datasetname == 'reddit_ballancetrain':
-        dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format('reddit'))
+        dataset = RedditDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format('reddit'))
         num_class = 41
     if datasetname == 'reddit_ballancelabel':
-        dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format('reddit'))
+        dataset = RedditDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format('reddit'))
         num_class = 41
     if datasetname == 'reddit_random':
-        dataset = RedditDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format('reddit'))
+        dataset = RedditDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format('reddit'))
         num_class = 41
     if datasetname == 'flickr':
-        dataset = FlickrDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        dataset = FlickrDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format(datasetname))
         num_class = 7
     if datasetname == 'igb_small':
         parser = argparse.ArgumentParser()
-        parser.add_argument('--path', type=str, default='/home/asd/文档/wtz/wtz/RayDGL/dataset/igb_small', 
+        parser.add_argument('--path', type=str, default='/home/bit/下载/hyp/wtz/RayDGL/dataset/igb_small', 
             help='path containing the datasets')
         parser.add_argument('--dataset_size', type=str, default='small',
             choices=['tiny', 'small', 'medium', 'large', 'full'], 
@@ -102,15 +105,15 @@ if __name__ == "__main__":
         dataset = IGB260MDGLDataset(args2)
         num_class = 19
     if datasetname == 'yelp':
-        dataset = YelpDataset(raw_dir='/home/asd/文档/wtz/wtz/RayDGL/dataset/{}'.format(datasetname))
+        dataset = YelpDataset(raw_dir='/home/bit/下载/hyp/wtz/RayDGL/dataset/{}'.format(datasetname))
         num_class = 100
     if datasetname == 'ogbn_products':
-        dataset = DglNodePropPredDataset(name = 'ogbn-products', root='/home/asd/文档/wtz/wtz/RayDGL/dataset/ogbn_products')
+        dataset = DglNodePropPredDataset(name = 'ogbn-products', root='/home/bit/下载/hyp/wtz/RayDGL/dataset/ogbn_products')
         split_idx = dataset.get_idx_split()
         train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
         graph, label = dataset[0] # graph: dgl graph object, label: torch tensor of shape (num_nodes, num_tasks)
     if datasetname == 'ogbn_arxiv':
-        dataset = DglNodePropPredDataset(name = 'ogbn-arxiv', root='/home/asd/文档/wtz/wtz/RayDGL/dataset/ogbn_arxiv')
+        dataset = DglNodePropPredDataset(name = 'ogbn-arxiv', root='/home/bit/下载/hyp/wtz/RayDGL/dataset/ogbn_arxiv')
         split_idx = dataset.get_idx_split()
         train_idx, valid_idx, test_idx = split_idx["train"], split_idx["valid"], split_idx["test"]
         graph, label = dataset[0] # graph: dgl graph object, label: torch tensor of shape (num_nodes, num_tasks)
@@ -162,7 +165,7 @@ if __name__ == "__main__":
             balance_ntypes = None
     
     
-    num_parts = 4
+    num_parts = 100
     # g = dgl.remove_self_loop(g)  # 消除自环
 
 
@@ -178,7 +181,7 @@ if __name__ == "__main__":
         g,
         datasetname,
         num_parts,
-        '/home/asd/文档/wtz/wtz/RayDGL/dataset/{} {} partition'.format(datasetname, num_parts),
+        '/home/bit/下载/hyp/wtz/RayDGL/dataset/{} {} partition'.format(datasetname, num_parts),
         num_hops=1,
         part_method='metis',
         # balance_ntypes=g.ndata['label']

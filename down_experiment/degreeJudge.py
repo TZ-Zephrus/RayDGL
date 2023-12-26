@@ -35,22 +35,22 @@ def arrangeOutDegree(graph, ratio):
         # print(count_of_target1)
     # 只有出度在前num_node*0.1名的才会被冗余存下来
     num_node = sum(graph.ndata['inner_node'].numpy())
-    sorted_elements = counter1.most_common(n = int(num_node*ratio))          # 从多到少
-    # sorted_elements = counter1.most_common()[:-int(num_node*ratio)-1:-1]     # 从少到多
+    # sorted_elements = counter1.most_common(n = int(num_node*ratio))          # 从多到少
+    sorted_elements = counter1.most_common()[:-int(num_node*ratio)-1:-1]     # 从少到多
     # print(sorted_elements)
     sorted_elements_only = [element for element, count in sorted_elements]
     # print(sorted_elements_only)  # 这里出现的，是出度排名靠前的顶点，这些顶点将不会被删去。
-    return sorted_elements_only
+    return sorted_elements_only, counter1
 
 if __name__ == '__main__':
-    datasetname = 'reddit'
+    datasetname = 'cora'
     num_parts = 100
     GNNlayer = 2
 
     part_id = 99
     (
         g_local, node_feats, edge_feats, gpb, graph_name, ntypes_list, etypes_list,
-    ) = dgl.distributed.load_partition(part_config='/home/asd/文档/wtz/wtz/RayDGL/dataset/{} {} partition/{}.json'.format(datasetname, num_parts, datasetname), part_id=part_id)
+    ) = dgl.distributed.load_partition(part_config='/home/bit/文档/wtz/RayDGL/dataset/{} {} partition/{}.json'.format(datasetname, num_parts, datasetname), part_id=part_id)
 
     num_node = sum(g_local.ndata['inner_node'].numpy())
     print('partition {}, inner_num_node = {}'.format(part_id, num_node))
@@ -98,8 +98,9 @@ if __name__ == '__main__':
         u_list = edges[0].tolist()
         v_list = edges[1].tolist()
     '''
-    outDegreeList = arrangeOutDegree(g_local, ratio=0.001)
-    print(outDegreeList)
+    outDegreeList,counter1 = arrangeOutDegree(g_local, ratio=0.5)
+    print("counter = ", counter1)
+    print("outDegreeList = ", outDegreeList)
 
     
 

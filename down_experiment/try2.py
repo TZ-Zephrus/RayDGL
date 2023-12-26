@@ -1,9 +1,8 @@
-from ogb.nodeproppred import DglNodePropPredDataset
 import numpy as np
 import dgl
 from dgl.data import CoraGraphDataset, RedditDataset
 import torch
-import pandas as pd
+# import pandas as pd
 
 
 from collections import Counter
