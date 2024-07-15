@@ -137,18 +137,18 @@ def del_mask(del_list, origin_mask):
 # 拉取邻接矩阵，特征，标签
 # 选择数据集    
 argparser = argparse.ArgumentParser(description='决定丢失副本数')
-argparser.add_argument('--part_num', 
-                       type=int,
-                       default=10,
-                       help='丢失的子图数')
-argparser.add_argument('--loss_time',
-                       type=int,
-                       default=0,
-                       help='选取丢失时间')
-argparser.add_argument('--dataset',
-                       type=str,
-                       default='citeseer',
-                       help='选取数据集')
+# argparser.add_argument('--part_num', 
+#                        type=int,
+#                        default=10,
+#                        help='丢失的子图数')
+# argparser.add_argument('--loss_time',
+#                        type=int,
+#                        default=0,
+#                        help='选取丢失时间')
+# argparser.add_argument('--dataset',
+#                        type=str,
+#                        default='citeseer',
+#                        help='选取数据集')
 
 
 
@@ -167,9 +167,9 @@ args = argparser.parse_args()
 
 
 # 12.16 16:00 刚写了个函数名，接下来需要拿到函数运算结果进行总结
-def run(loss_time_input, part_num_input):
+def run(loss_time_input, part_num_input, dataset, use):
 
-    datasetname = args.dataset
+    datasetname = dataset
     num_parts = 100
 
 
@@ -269,7 +269,7 @@ def run(loss_time_input, part_num_input):
     # part_id = [0,1,2,3,4,5,6,7,8,9,10]
 
     # 使用度
-    use_degree_judge = False
+    use_degree_judge = use
 
     ratio = 0.3
     hop_range = 0
@@ -406,17 +406,18 @@ def run(loss_time_input, part_num_input):
     return acc_test
 
 
-datasetname = 'flickr'
-
-train_times = 10
+dataset = 'reddit'
+use_degree = False
+train_times = 6
 # 定义损失数量
 part_num_origin = [0,5,10,15,20,25,30,35,40,45,50,55,60,65]
-loss_time_origin = 0
+# part_num_origin = [0]
+loss_time_origin = 10
 acc_total = np.reshape(np.arange(1,train_times+1), (1, train_times))    # acc矩阵
 for i in part_num_origin:
     acc_line = np.array([])     # acc矩阵的一行（一种part_num)
     for j in range(train_times):
-        acc = run(loss_time_origin,i)
+        acc = run(loss_time_origin,i,dataset, use_degree)
         acc_line = np.append(acc_line, acc)
     acc_line = np.reshape(acc_line, (1, train_times))
     acc_total = np.append(acc_total, acc_line, axis=0)
